@@ -1,0 +1,19 @@
+# Cargo config for the STM32F401 (Cortex-M4F, hard float).
+# `thumbv7em-none-eabihf` = Thumb-2 + FPU, matches the C build's
+# -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard.
+
+[build]
+target = "thumbv7em-none-eabihf"
+
+[target.thumbv7em-none-eabihf]
+# `cargo run` flashes and runs via ST-Link using probe-rs. Install once with:
+#   cargo install probe-rs-tools --locked
+runner = "probe-rs run --chip STM32F401CEUx"
+
+rustflags = [
+    # Use cortex-m-rt's linker script. It consumes our memory.x to get FLASH/RAM
+    # regions and lays out .isr_vector / .text / .rodata / .data / .bss for us.
+    "-C", "link-arg=-Tlink.x",
+    # --nmagic disables page-aligned sections — smaller flash image on MCUs.
+    "-C", "link-arg=--nmagic",
+]

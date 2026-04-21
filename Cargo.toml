@@ -1,0 +1,35 @@
+[package]
+name = "blinky"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Embassy async runtime + HAL for STM32F401.
+# `stm32f401ce` selects the correct PAC + memory layout for our 512K/96K part.
+# `time-driver-any` lets embassy-time pick a free timer automatically.
+# `exti` wires up external-interrupt support (cheap to include; useful later).
+embassy-stm32 = { version = "0.2", features = [
+    "stm32f401ce",
+    "time-driver-any",
+    "exti",
+    "unstable-pac",
+] }
+embassy-executor = { version = "0.7", features = [
+    "arch-cortex-m",
+    "executor-thread",
+] }
+embassy-time = { version = "0.4", features = ["tick-hz-32_768"] }
+
+cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = "0.7"
+panic-halt = "1.0"
+
+# Size-optimized release profile. Equivalent intent to the C build's -Og + gc-sections:
+# small, debuggable-enough firmware. `lto = "fat"` + `codegen-units = 1` get the
+# biggest size wins; `opt-level = "s"` favors size over speed.
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+debug = 2
+overflow-checks = false
