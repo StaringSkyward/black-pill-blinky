@@ -56,6 +56,7 @@ LDFLAGS  = $(MCU) -T$(LDSCRIPT) --specs=nano.specs --specs=nosys.specs \
 # means adding the matching stm32f4xx_hal_<module>.c here too.
 C_SOURCES = \
 	Core/Src/main.c \
+	Core/Src/ssd1306.c \
 	Core/Src/stm32f4xx_it.c \
 	Core/Src/stm32f4xx_hal_msp.c \
 	Core/Src/system_stm32f4xx.c \
@@ -64,6 +65,8 @@ C_SOURCES = \
 	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c \
 	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c \
 	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c \
+	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c \
+	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c \
 	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c \
 	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c \
 	Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c \

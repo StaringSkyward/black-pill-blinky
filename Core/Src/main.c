@@ -4,6 +4,7 @@
  **/
 
 #include "main.h"
+#include "ssd1306.h"
 
 #include <stdbool.h>
 
@@ -22,18 +23,23 @@ typedef enum
 } BtnEvent_t;
 
 #define LONG_PRESS_MS 1000U
-#define SLOW_PERIOD_MS 750U
-#define FAST_PERIOD_MS 250U
+#define SLOW_PERIOD_MS 800U
+#define FAST_PERIOD_MS 200U
 #define DEBOUNCE_MS 20U
+#define DISPLAY_TIMEOUT_MS 4000U
 
 /* Status LED on PC13 is active-low on the Black Pill board */
 #define LED_OFF_STATE GPIO_PIN_SET
 
+I2C_HandleTypeDef hi2c1;
+
 static void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_I2C1_Init(void);
 static void button_init(uint32_t now);
 static BtnEvent_t button_poll(uint32_t now);
 static void led_tick(LedMode_t mode, uint32_t now);
+static void display_update(LedMode_t mode, uint32_t now, bool event);
 
 /**
  * @brief  Application entry point.
@@ -44,6 +50,12 @@ int main(void)
    HAL_Init();
    SystemClock_Config();
    MX_GPIO_Init();
+   MX_I2C1_Init();
+
+   if (ssd1306_init(&hi2c1) != HAL_OK)
+   {
+      Error_Handler();
+   }
 
    button_init(HAL_GetTick());
    LedMode_t mode = MODE_OFF;
@@ -52,7 +64,8 @@ int main(void)
    {
       uint32_t now = HAL_GetTick();
 
-      switch (button_poll(now))
+      BtnEvent_t evt = button_poll(now);
+      switch (evt)
       {
       case BTN_EVENT_SHORT_PRESS:
          mode = (mode == MODE_OFF) ? MODE_SLOW : MODE_OFF;
@@ -65,6 +78,7 @@ int main(void)
       }
 
       led_tick(mode, now);
+      display_update(mode, now, evt != BTN_EVENT_NONE);
 
       /* Sleep until the next SysTick or button edge wakes us. */
       __WFI();
@@ -149,6 +163,40 @@ static void led_tick(LedMode_t mode, uint32_t now)
    }
 }
 
+static void display_update(LedMode_t mode, uint32_t now, bool event)
+{
+   static bool on = false;
+   static uint32_t last_active;
+
+   if (event)
+   {
+      const char *text;
+      switch (mode)
+      {
+      case MODE_SLOW: text = "LED: SLOW"; break;
+      case MODE_FAST: text = "LED: FAST"; break;
+      case MODE_OFF:
+      default:        text = "LED: OFF";  break;
+      }
+      ssd1306_clear();
+      ssd1306_draw_text(1, 1, text);
+      ssd1306_flush();
+      if (!on)
+      {
+         ssd1306_display_on();
+         on = true;
+      }
+      last_active = now;
+      return;
+   }
+
+   if (on && (now - last_active) >= DISPLAY_TIMEOUT_MS)
+   {
+      ssd1306_display_off();
+      on = false;
+   }
+}
+
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -227,9 +275,9 @@ static void MX_GPIO_Init(void)
 
    /* Configure GPIO pins : PB0 PB1 PB2 PB10
                             PB12 PB13 PB14 PB15
-                            PB3 PB4 PB5 PB6
-                            PB7 PB8 PB9 */
-   GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_10 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
+                            PB3 PB4 PB5 PB8 PB9
+                            (PB6 and PB7 are driven by HAL_I2C_MspInit) */
+   GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_10 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_8 | GPIO_PIN_9;
    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -243,6 +291,26 @@ static void MX_GPIO_Init(void)
 
    HAL_NVIC_SetPriority(USER_BUTTON_EXTI_IRQn, 2, 0);
    HAL_NVIC_EnableIRQ(USER_BUTTON_EXTI_IRQn);
+}
+
+/**
+ * @brief I2C1 Initialization: 100 kHz standard mode on PB6/PB7.
+ */
+static void MX_I2C1_Init(void)
+{
+   hi2c1.Instance             = I2C1;
+   hi2c1.Init.ClockSpeed      = 100000;
+   hi2c1.Init.DutyCycle       = I2C_DUTYCYCLE_2;
+   hi2c1.Init.OwnAddress1     = 0;
+   hi2c1.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
+   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+   hi2c1.Init.OwnAddress2     = 0;
+   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+   hi2c1.Init.NoStretchMode   = I2C_NOSTRETCH_DISABLE;
+   if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+   {
+      Error_Handler();
+   }
 }
 
 /**
