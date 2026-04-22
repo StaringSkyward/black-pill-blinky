@@ -51,3 +51,9 @@ After a successful compilation:
 3. Once that is finished, release the `BOOT0` button.
 4. Finally press the `NRST` button once more and your new binary should run on the MCU.
    
+
+# Licensing
+
+Portions of this code are Copyright (c) 2017 STMicroelectronics. All rights reserved.
+
+This code is provided as-is without warranty. Use entirely at your own risk for education only.
