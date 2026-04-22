@@ -1,4 +1,4 @@
-# STM32 Blinky
+# STM32 "Black Pill" Blinky
 
 This project simply blinks the LED of an STM32F401CEU6 variant of the "Black Pill" board using mostly common, open source tooling in linux.
 
